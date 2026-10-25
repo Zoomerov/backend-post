@@ -11,6 +11,7 @@ class Client {
 private:
     WSADATA wsaData;
     ADDRINFO hints;
+    bool wsaInitialized = false;
     ADDRINFO* addrResult = nullptr;
     SOCKET ConnectSocket = INVALID_SOCKET;
     const char* sendBuffer = "OK\n";
@@ -25,12 +26,21 @@ public:
         hints.ai_protocol = IPPROTO_TCP; // протокол tcp
 
         //создание сокета
+
         int result = WSAStartup(MAKEWORD(2,2), &wsaData);
         if (result != 0) {
             cout << "WSAStartup failed, result = " << result << endl;
             throw std::runtime_error(std::string("WSAStartup failed with error: ") + std::to_string(result));
+        } else {
+            wsaInitialized = true;
         }
     };
+    Client(const Client&) = delete;
+    Client& operator=(const Client&) = delete;
+
+    ~Client() noexcept{
+        ClosingSocket();
+    }
 
     void CheckAddres() {
         int result = getaddrinfo("localhost","8080", &hints, &addrResult);
@@ -71,6 +81,15 @@ public:
         do {
             ZeroMemory(recvBuffer,512);
             result = recv(ConnectSocket, recvBuffer, 512,0);
+            if (result == SOCKET_ERROR) {
+                int error = WSAGetLastError();
+                throw std::runtime_error(std::string("Recv error ") + to_string(error));
+            }
+
+            if (result == 0) {
+                throw std::runtime_error("Connection closed before receiving data");
+            }
+
             if (result > 0) {
                 std::cout << "Received " << result << " bytes" << std::endl;
                 std::cout << "Received data: ";
@@ -87,12 +106,18 @@ public:
     void ClosingSocket() {
         if (ConnectSocket != INVALID_SOCKET) {
             closesocket(ConnectSocket);
+            ConnectSocket = INVALID_SOCKET;
         }
 
         if (addrResult != nullptr) {
             freeaddrinfo(addrResult);
+            addrResult = nullptr;
         }
-        WSACleanup();
+
+        if (wsaInitialized) {
+            WSACleanup();
+            wsaInitialized = false;
+        }
     }
 };
 
@@ -103,6 +128,5 @@ int main() {
     client.createConnectSocket();
     client.Connect();
     client.workWithServer();
-    client.ClosingSocket();
     return 0;
 }
