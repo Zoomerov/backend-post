@@ -1,0 +1,5 @@
+1. Hedged Requests
+
+In the architecture of large-scale distributed systems—particularly those based on a microservices architecture—a pattern known as "Hedged Requests" is employed.
+Purpose: To mitigate the impact of "tail latency." Occasionally, a server or database may experience a temporary slowdown (due to factors such as garbage collection, a network spike, or high load).
+How it works: A client sends a request to server "A." If no response is received within a specified, short timeout (e.g., 10–20 ms), the client—without waiting to cancel the first request—simultaneously sends an identical ("hedged") request to server "B." The system uses whichever response arrives first, and the second request is subsequently canceled.
