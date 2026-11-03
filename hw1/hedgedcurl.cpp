@@ -4,7 +4,7 @@
 #include <vector>
 #include <curl/curl.h>
 #include <chrono>
-
+#include <filesystem>
 
 class Hedgedcurl {
 private:
@@ -162,7 +162,7 @@ public:
                     throw std::runtime_error(std::string("too many arguments for --help\n"));
                 }
 
-                std::ifstream file("HelpHedgedcurl.txt");
+                std::ifstream file(std::filesystem::current_path() / "HelpHedgedcurl.txt");
                 if (!file.is_open()) {
                     throw std::runtime_error("Opening error -> HelpHedgedcurl.txt\n");
                 }
@@ -181,15 +181,22 @@ public:
             }
 
             std::string value(argv[2]);
-            std::size_t parsed = 0;
-            seconds = std::stoi(value, &parsed);
 
-            if (parsed != value.size() || seconds <= 0) {
-                throw std::runtime_error("Invalid timeout");
+            try {
+                std::size_t parsed = 0;
+                seconds = std::stoi(value, &parsed);
+
+                if (parsed != value.size() || seconds <= 0) {
+                    throw std::runtime_error("Invalid timeout");
+                }
+            } catch (const std::invalid_argument &) {
+                throw std::runtime_error("The parameter -t or --timeout must be a number");
+            } catch (const std::out_of_range &) {
+                throw std::runtime_error("Parameter of time is too big");
             }
-
             firstUrl = 3;
         }
+
 
         std::vector<std::string> urls;
 
@@ -198,7 +205,7 @@ public:
             if (isHttpURL(url)) {
                 urls.push_back(url);
             } else {
-                std::cerr << "Unavalable parametr for urls\n" << url << '\n';
+                std::cerr << "Unavalable parameter for urls\n" << url << '\n';
             }
         }
 
@@ -216,5 +223,7 @@ int main(int argc, char *argv[]) {
         return hedgedcurl.Start();
     } catch (const std::runtime_error &e) {
         std::cerr << "Error: " << e.what() << "\n";
+        return 1;
     }
+    return 0;
 }
