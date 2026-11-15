@@ -1,0 +1,16 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis-auth
+    restart: always
+    ports:
+      - "6379:6379"
+      ##valumes - не буду хранить на пост машине
+    command: redis-server --save 60 1 --loglevel warning --requirepass admin
+
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "admin", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
